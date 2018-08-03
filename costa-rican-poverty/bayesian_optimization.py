@@ -36,6 +36,8 @@ train_valid_labels = train.loc[train['parentesco1'] == 1, ['idhogar', 'Target']]
 feature_matrix = pd.read_csv('data/ft_2000.csv', low_memory = False)
 feature_matrix.shape
 
+feature_matrix.drop(columns = 'idhogar', inplace = True)
+
 for col in feature_matrix.select_dtypes('object'):
 	if col != 'idhogar':
 		feature_matrix[col] = feature_matrix[col].astype(np.float32)
@@ -239,7 +241,7 @@ OUT_FILE = 'optimization/optimization1.csv'
 of_connection = open(OUT_FILE, 'w')
 writer = csv.writer(of_connection)
 
-MAX_EVALS = 100
+MAX_EVALS = 1000
 N_FOLDS = 5
 ITERATION = 0
 
