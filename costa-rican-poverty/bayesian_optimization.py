@@ -30,19 +30,18 @@ import ast
 
 import json
 
-train = pd.read_csv('../input/costa-rican-household-poverty-prediction/train.csv')
+train = pd.read_csv('data/train.csv')
 train_valid_labels = train.loc[train['parentesco1'] == 1, ['idhogar', 'Target']].copy()
 
-feature_matrix = pd.read_csv('../input/costa-rican-poverty-derived-data/ft_2000.csv', low_memory = False)
+feature_matrix = pd.read_csv('data/ft_2000.csv', low_memory = False)
 feature_matrix.shape
 
-feature_matrix['SUM(ind.rez_esc / escolari)'] = feature_matrix['SUM(ind.rez_esc / escolari)'].astype(np.float64)
-feature_matrix['SUM(ind.age / escolari)'] = feature_matrix['SUM(ind.age / escolari)'].astype(np.float64)
-
-feature_matrix.columns[np.where(feature_matrix.dtypes == 'object')[0]]
+for col in feature_matrix.select_dtypes('object'):
+	if col != 'idhogar':
+		feature_matrix[col] = feature_matrix[col].astype(np.float32)
 
 missing_threshold = 0.95
-correlation_threshold = 0.99
+correlation_threshold = 0.95
 
 feature_matrix = feature_matrix.replace({np.inf: np.nan, -np.inf:np.nan})
 
@@ -226,7 +225,7 @@ space = {
     'num_leaves': hp.quniform('num_leaves', 5, 50, 1),
     'learning_rate': hp.loguniform('learning_rate', np.log(0.015), np.log(0.5)),
     'subsample_for_bin': hp.quniform('subsample_for_bin', 20000, 300000, 20000),
-    'min_child_samples': hp.quniform('min_child_samples', 10, 60, 5),
+    'min_child_samples': hp.quniform('min_child_samples', 5, 60, 3),
     'reg_alpha': hp.uniform('reg_alpha', 0.0, 1.0),
     'reg_lambda': hp.uniform('reg_lambda', 0.0, 1.0),
     'colsample_bytree': hp.uniform('colsample_by_tree', 0.6, 1.0)
@@ -236,7 +235,7 @@ space = {
 trials = Trials()
 
 # Create a file and open a connection
-OUT_FILE = 'optimization2.csv'
+OUT_FILE = 'optimization/optimization1.csv'
 of_connection = open(OUT_FILE, 'w')
 writer = csv.writer(of_connection)
 
@@ -258,11 +257,11 @@ best = fmin(fn = objective, space = space, algo = tpe.suggest, trials = trials,
 import json
 
 # Save the trial results
-with open('trials.json', 'w') as f:
+with open('optimization/trials1.json', 'w') as f:
     f.write(json.dumps(trials))
 
 print(best)
 
 results = pd.read_csv(OUT_FILE, index_col = 0)
 results = results.sort_values('score', ascending = False)
-results.to_csv('sorted_optimization2.csv', index = False)
+results.to_csv('optimization/sorted_optimization1.csv', index = False)
