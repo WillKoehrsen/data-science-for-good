@@ -33,77 +33,84 @@ import json
 train = pd.read_csv('data/train.csv')
 train_valid_labels = train.loc[train['parentesco1'] == 1, ['idhogar', 'Target']].copy()
 
-feature_matrix = pd.read_csv('data/ft_2000.csv', low_memory = False)
-feature_matrix.shape
+feature_selection = False
 
-feature_matrix.drop(columns = 'idhogar', inplace = True)
+if feature_selection:
+	feature_matrix = pd.read_csv('data/ft_2000.csv', low_memory = False)
+	feature_matrix.drop(columns = 'idhogar', inplace = True)
+	print(feature_matrix.shape)
 
-for col in feature_matrix.select_dtypes('object'):
-	if col != 'idhogar':
-		feature_matrix[col] = feature_matrix[col].astype(np.float32)
+	for col in feature_matrix.select_dtypes('object'):
+		if col != 'idhogar':
+			feature_matrix[col] = feature_matrix[col].astype(np.float32)
 
-missing_threshold = 0.95
-correlation_threshold = 0.95
+	missing_threshold = 0.95
+	correlation_threshold = 0.95
 
-feature_matrix = feature_matrix.replace({np.inf: np.nan, -np.inf:np.nan})
+	feature_matrix = feature_matrix.replace({np.inf: np.nan, -np.inf:np.nan})
 
-# One hot encoding (if necessary)
-feature_matrix = pd.get_dummies(feature_matrix)
-n_features_start = feature_matrix.shape[1]
-print('Original shape: ', feature_matrix.shape)
+	# One hot encoding (if necessary)
+	feature_matrix = pd.get_dummies(feature_matrix)
+	n_features_start = feature_matrix.shape[1]
+	print('Original shape: ', feature_matrix.shape)
 
-# Find missing and percentage
-missing = pd.DataFrame(feature_matrix.isnull().sum())
-missing['fraction'] = missing[0] / feature_matrix.shape[0]
-missing.sort_values('fraction', ascending = False, inplace = True)
+	# Find missing and percentage
+	missing = pd.DataFrame(feature_matrix.isnull().sum())
+	missing['fraction'] = missing[0] / feature_matrix.shape[0]
+	missing.sort_values('fraction', ascending = False, inplace = True)
 
-# Missing above threshold
-missing_cols = list(missing[missing['fraction'] > missing_threshold].index)
-n_missing_cols = len(missing_cols)
+	# Missing above threshold
+	missing_cols = list(missing[missing['fraction'] > missing_threshold].index)
+	n_missing_cols = len(missing_cols)
 
-# Remove missing columns
-feature_matrix = feature_matrix[[x for x in feature_matrix if x not in missing_cols]]
-print('{} missing columns with threshold: {}.'.format(n_missing_cols, missing_threshold))
+	# Remove missing columns
+	feature_matrix = feature_matrix[[x for x in feature_matrix if x not in missing_cols]]
+	print('{} missing columns with threshold: {}.'.format(n_missing_cols, missing_threshold))
 
-# Zero variance
-unique_counts = pd.DataFrame(feature_matrix.nunique()).sort_values(0, ascending = True)
-zero_variance_cols = list(unique_counts[unique_counts[0] == 1].index)
-n_zero_variance_cols = len(zero_variance_cols)
+	# Zero variance
+	unique_counts = pd.DataFrame(feature_matrix.nunique()).sort_values(0, ascending = True)
+	zero_variance_cols = list(unique_counts[unique_counts[0] == 1].index)
+	n_zero_variance_cols = len(zero_variance_cols)
 
-# Remove zero variance columns
-feature_matrix = feature_matrix[[x for x in feature_matrix if x not in zero_variance_cols]]
-print('{} zero variance columns.'.format(n_zero_variance_cols))
+	# Remove zero variance columns
+	feature_matrix = feature_matrix[[x for x in feature_matrix if x not in zero_variance_cols]]
+	print('{} zero variance columns.'.format(n_zero_variance_cols))
 
-# Correlations
-corr_matrix = feature_matrix.corr()
+	# Correlations
+	corr_matrix = feature_matrix.corr()
 
-# Extract the upper triangle of the correlation matrix
-upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k = 1).astype(np.bool))
+	# Extract the upper triangle of the correlation matrix
+	upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k = 1).astype(np.bool))
 
-# Select the features with correlations above the threshold
-# Need to use the absolute value
-to_drop = [column for column in upper.columns if any(upper[column].abs() > correlation_threshold)]
+	# Select the features with correlations above the threshold
+	# Need to use the absolute value
+	to_drop = [column for column in upper.columns if any(upper[column].abs() > correlation_threshold)]
 
-n_collinear = len(to_drop)
+	n_collinear = len(to_drop)
 
-feature_matrix = feature_matrix[[x for x in feature_matrix if x not in to_drop]]
-print('{} collinear columns removed with correlation above {}.'.format(n_collinear,  correlation_threshold))
+	feature_matrix = feature_matrix[[x for x in feature_matrix if x not in to_drop]]
+	print('{} collinear columns removed with correlation above {}.'.format(n_collinear,  correlation_threshold))
 
-total_removed = n_missing_cols + n_zero_variance_cols + n_collinear
+	total_removed = n_missing_cols + n_zero_variance_cols + n_collinear
 
-print('Total columns removed: ', total_removed)
-print('Shape after feature selection: {}.'.format(feature_matrix.shape))
+	print('Total columns removed: ', total_removed)
+	print('Shape after feature selection: {}.'.format(feature_matrix.shape))
 
-# Remove columns derived from the Target
-drop_cols = []
-for col in feature_matrix:
-    if col == 'Target':
-        pass
-    else:
-        if 'Target' in col:
-            drop_cols.append(col)
+	# Remove columns derived from the Target
+	drop_cols = []
+	for col in feature_matrix:
+	    if col == 'Target':
+	        pass
+	    else:
+	        if 'Target' in col:
+	            drop_cols.append(col)
 
-feature_matrix = feature_matrix[[x for x in feature_matrix if x not in drop_cols]]    
+	feature_matrix = feature_matrix[[x for x in feature_matrix if x not in drop_cols]]    
+	feature_matrix.to_csv('data/ft_2000_clean.csv')
+
+else:
+	feature_matrix = pd.read_csv('data/ft_2000_clean.csv')
+	feature_matrix.drop(columns = 'idhogar', inplace = True)
 
 # Extract out training and testing data
 train = feature_matrix[feature_matrix['Target'].notnull()]
@@ -163,7 +170,6 @@ def objective(hyperparameters):
     
     # Keep track of evals
     global ITERATION
-    
     ITERATION += 1
     
     # Using early stopping to find number of trees trained
@@ -184,8 +190,9 @@ def objective(hyperparameters):
     # Will be selected with early stopping
     hyperparameters['n_estimators'] = 10000
     hyperparameters['class_weight'] = 'balanced'
-    # hyperparameters['device'] = 'gpu'
-    model = lgb.LGBMClassifier(**hyperparameters)
+
+    model = lgb.LGBMClassifier(n_jobs = -1, 
+    	                       **hyperparameters)
     
     start = timer()
     valid_scores, best_estimators = model_valid(model, train, train_labels)
@@ -233,24 +240,27 @@ space = {
     'colsample_bytree': hp.uniform('colsample_by_tree', 0.6, 1.0)
 }
 
-# Record results
-trials = Trials()
+
 
 # Create a file and open a connection
 OUT_FILE = 'optimization/optimization1.csv'
 of_connection = open(OUT_FILE, 'w')
 writer = csv.writer(of_connection)
 
-MAX_EVALS = 1000
-N_FOLDS = 5
-ITERATION = 0
-
 # Write column names
 headers = ['loss', 'hyperparameters', 'iteration', 'runtime', 'score', 'std']
 writer.writerow(headers)
 of_connection.close()
 
+MAX_EVALS = 1000
+N_FOLDS = 5
+
+ITERATION = 0
+
 print("Running Optimization for {} Trials.".format(MAX_EVALS))
+
+# Record results
+trials = Trials()
 
 # Run optimization
 best = fmin(fn = objective, space = space, algo = tpe.suggest, trials = trials,
