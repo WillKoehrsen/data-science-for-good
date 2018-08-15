@@ -1,0 +1,12 @@
+C real [0.001, 1000.0] [1.0]
+kernel categorical {linear, rbf, poly, sigmoid} [poly]
+shrinking categorical {true, false} [true]
+coef0 real [0.0, 10.0] [0.0]
+degree integer [1, 5] [3]
+gamma categorical {auto, value} [auto]
+gamma_value real [0.0001, 8.0] [1.0]
+
+coef0 | kernel in {poly, sigmoid}
+degree | kernel in {poly}
+gamma | kernel in {rbf, poly, sigmoid}
+gamma_value | gamma in {value}

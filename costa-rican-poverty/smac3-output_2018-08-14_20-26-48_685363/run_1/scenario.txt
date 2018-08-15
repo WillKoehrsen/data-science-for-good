@@ -1,0 +1,5 @@
+abort_on_first_run_crash = True
+always_race_default = False
+execdir = .
+deterministic = True
+intensification_percentage = 0.5
