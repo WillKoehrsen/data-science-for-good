@@ -1,0 +1,18 @@
+boosting_type categorical {goss, dart, gbdt} [dart]
+colsample_bytree real [0.5, 1.0] [0.75]
+learning_rate real [0.025, 0.25] [0.1375]
+limit_max_depth categorical {true, false} [true]
+min_child_samples integer [5, 80] [10]
+num_leaves integer [3, 50] [26]
+reg_alpha real [0.0, 1.0] [0.5]
+reg_lambda real [0.0, 1.0] [0.5]
+subsample_for_bin integer [2000, 100000] [51000]
+drop_rate real [0.1, 0.5] [0.3]
+max_depth integer [1, 40] [20]
+subsample real [0.5, 1.0] [1.0]
+subsample_freq integer [1, 10] [6]
+
+drop_rate | boosting_type in {dart}
+subsample | boosting_type in {gbdt, dart}
+subsample_freq | boosting_type in {gbdt, dart}
+max_depth | limit_max_depth in {true}
